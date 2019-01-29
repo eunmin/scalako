@@ -1,11 +1,5 @@
 # 서비스
 
----
-menu: main
-weight: 100
-title: Service
----
-
 This tutorial will walk you through creating your first http4s service
 and calling it with http4s' client.
 
