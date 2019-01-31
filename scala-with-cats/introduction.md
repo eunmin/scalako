@@ -13,7 +13,8 @@
   ```scala
   // 단순한 JSON AST 정의하기
   sealed trait Json
-  final case class JsObject(get: Map[String, Json]) extends Json final case class JsString(get: String) extends Json
+  final case class JsObject(get: Map[String, Json]) extends Json 
+  final case class JsString(get: String) extends Json
   final case class JsNumber(get: Double) extends Json
   case object JsNull extends Json
   // JSON 직렬화 동작은 이 트레이트에 인코딩 되어 있다.
@@ -30,6 +31,7 @@
 - 스칼라에서 인스턴스는 타입 클래스를 구체적으로 구현을 정의한 것이고 `implicit` 태그를 붙인다.
   ```scala
   final case class Person(name: String, email: String)
+  
   object JsonWriterInstances {
     implicit val stringWriter: JsonWriter[String] =
       new JsonWriter[String] {
