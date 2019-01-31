@@ -137,7 +137,7 @@
 ### Implicit 스코프
 
 - 위에서 본 것처럼 컴파일러가 타입에 따라 대상이 되는 인스턴스 중에서 타입 클래스 인스턴스 찾는다.
-- 다음 예제는 `JsonWriter[String]` 타입의 인스턴스를 찾을 것이다.
+- 다음 예제는 `JsonWriter[String]` 타입의 인스턴스를 찾을 것이다.
   ```scala
   Json.toJson("A string!")
   ```
