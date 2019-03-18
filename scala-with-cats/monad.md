@@ -78,3 +78,102 @@ def divide(a: Int, b: Int): Option[Int] =
       ans  <- divide(aNum, bNum)
   } yield ans
   ```
+
+### List
+
+- 다음은 `flatMap`을 List에 적용해보자. for 문법을 쓰면 절차형 프로그래밍 언어의 반복문과 많이 비슷
+  하다.
+  ```scala
+  for {
+    x <- (1 to 3).toList
+    y <- (4 to 5).toList
+  } yield (x, y)
+  // res5: List[(Int, Int)] = List((1,4), (1,5), (2,4), (2,5), (3,4), (3,5))
+  ```
+- 리스트를 중간 결과에 Set으로 보면 `flatMap`은 순서를 바꾸고 조합하는 생성자가 된다.
+- 위 예제에서 `x`는 가능한 값이 3개 있고 `y`는 가능한 값이 2개 있다.
+- 이것은 6개의 `(x, y)` 가능한 값이 있다. `flatMap`이 코드에서 이런 코드를 생성한다.
+  - `x` 가져오기
+  - `y` 가져오기
+  - `(x, y)` 튜플 만들기
+
+### Future
+
+- Future는 비동기를 신경쓰지 않고 연속적인 계산을 할 수 있게 해주는 모나드다.
+  ```scala
+  import scala.concurrent.Future
+  import scala.concurrent.ExecutionContext.Implicits.global
+  import scala.concurrent.duration._
+
+  def doSomethingLongRunning: Future[Int] = ???
+  def doSomethingElseLongRunning: Future[Int] = ???
+
+  def doSomethingVeryLongRunning: Future[Int] =
+    for {
+      result1 <- doSomethingLongRunning
+      result2 <- doSomethingElseLongRunning
+    } yield result1 + result2
+  ```
+- 코드의 각 단계가 실행될 때, `flatMap`은 복잡한 스래드풀, 스케쥴일에 대한 처리를 담당한다.
+- Future를 많이 써봤다면 위에 코드가 순서대로 실행된다는 것을 알 수 있다.
+- for 구문을 쓴다면 중첩된 `flatMap` 호출을 더 명확하게 만들 수 있다.
+  ```scala
+  def doSomethingVeryLongRunning: Future[Int] =
+    doSomethingLongRunning.flatMap { result1 =>
+      doSomethingElseLongRunning.map { result2 =>
+        result1 + result2
+      }
+    }
+  ```
+- 연속된 계산 속에 있는 각각의 Future는 이전 Future의 결과를 받는 함수를 생성한다. 다시 말해 계산의
+  각 단계는 이전 작업이 끝나야만 시작할 수 있다.
+- 물론 Future를 동시에 실행할 수 도 있지만 모나드는 연속된 계산에 대한 내용이기 때문에 그건 딴 얘기다.
+
+## 모나드 정의
+
+- 위에서 `flatMap`에 대해서만 이야기 했지만 원래 모나드는 연산이 두개다.
+  - `A => F[A]` 타입의 `pure`
+  - `(F[A], A => F[B]) => F[B]` 타입의 `flatMap`
+- `pure`는 생성자를 추상화 한다. 일반 값을 받아서 모나드 값을 만든다.
+- `flatMap`은 위에서 이야기 한 것 처럼 컨택스트에서 값을 꺼내서 다음 계산의 컨택스트를 만든다.
+- 아래는 간단한 버전의 Cats 모나드 타입 클래스다.
+  ```scala
+  import scala.language.higherKinds
+
+  trait Monad[F[_]] {
+    def pure[A](value: A): F[A]
+
+    def flatMap[A, B](value: F[A])(func: A => F[B]): F[B]
+  }
+  ```
+### 모나드 법칙
+- `pure`와 `flatMap`은 의도하지 않은 결과가 생기지 않도록 몇 가지 규칙을 따라야한다.
+- 왼쪽 항등원 법칙: `pure` 결과에 `func`로 변환을 하면 `func`를 그냥 쓴것과 같아야 한다:
+  ```scala
+  pure(a).flatMap(func) == func(a)
+  ```
+- 오른쪽 항등원 법칙: `flatMap`에 `pure`를 넘기면 아무것도 하지 않은 것과 같아야한다:
+  ```scala
+  m.flatMap(pure) == m
+  ```
+- 결합 법칙: `f`와 `g`를 `flatMap`한 것은 `f`와 `g`를 `flatMap`한 것과 같아야한다:
+  ```scala
+  m.flatMap(f).flatMap(g) == m.flatMap(x => f(x).flatMap(g))
+  ```
+
+## 연습문제
+
+- 모든 모나드는 functor기 때문에 모나드로 map을 구현해봐라.
+
+```scala
+import scala.language.higherKinds
+
+trait Monad[F[_]] {
+  def pure[A](a: A): F[A]
+
+  def flatMap[A, B](value: F[A])(func: A => F[B]): F[B]
+
+  def map[A, B](value: F[A])(func: A => B): F[B] =
+    flatMap(value)(x => pure(func(x)))
+}
+```
