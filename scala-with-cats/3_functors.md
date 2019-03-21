@@ -388,3 +388,86 @@ implicit val treeFunctor = new Functor[Tree] {
     }
 }
 ```
+
+## Either
+
+- 이제 다른 유용한 모나드인 스칼라 기본 라이브러리에 있는 `Either`타입 에 대해 살펴보자. 스칼라 2.11
+  이전에는 많은 사람들이 `Either` 모나드를 신경쓰지 않았다. 왜냐면 `Either`에 `map`이나
+  `flatMap` 메서드가 없었기 때문이다. 하지만 스칼라 2.12 부터 `Either`는 right로 편향 되었다.
+
+### Left와 Right 편향
+
+- 스칼라 2.11에는 `map`과 `flatMap`이 없었다. 그래서 2.11 버전에서는 `Either`를 for 구문에 쓰기
+  불편했다. for 구문의 매 생성절에 `.right`를 붙었었다.
+  ```scala
+  val either1: Either[String, Int] = Right(10)
+  val either2: Either[String, Int] = Right(32)
+
+  for {
+    a <- either1.right
+    b <- either2.right
+  } yield a + b
+  // res0: scala.util.Either[String,Int] = Right(42)
+  ```
+- 스칼라 2.12에서 `Either`가 재설계되었다. 새로운 `Either`는 `map`과 `flatMap`이 직접 right가
+  성공으로 판단하도록 해서 for 구문이 더 좋아졌다.
+  ```scala
+  for {
+    a <- either1
+    b <- either2
+  } yield a + b
+  // res1: scala.util.Either[String,Int] = Right(42)
+  ```
+- Cats는 스칼라 2.11에서 `cats.syntax.either`를 import 해서 right 편향을 지원하기 때문에 모든
+  스칼라 버전에서 동일한 구문을 쓸 수 있다. 2.12에 써도 문제가 없다.
+  ```scala
+  import cats.syntax.either._ // for map and flatMap
+
+  for {
+    a <- either1
+    b <- either2
+  } yield a + b
+  ```
+
+### 인스턴스 만들기
+
+- `Left`나 `Right` 인스턴스를 직접 만들기 위해 `cats.syntax.either`에 있는 `asLeft`나
+  `asRight`를 쓸 수 있다.
+  ```scala
+  import cats.syntax.either._ // for asRight
+
+  val a = 3.asRight[String]
+  // a: Either[String,Int] = Right(3)
+
+  val b = 4.asRight[String]
+  // b: Either[String,Int] = Right(4)
+
+  for {
+    x <- a
+    y <- b
+  } yield x*x + y*y
+  // res4: scala.util.Either[String,Int] = Right(25)
+  ```
+- 이 똑똑한 생성자는 `Left.apply`나 `Right.apply`에 비해 장점이 있다. 왜냐햐면 이 생성자는
+  `Either` 타입을 리턴하지 않고 `Left`나 `Right`타입을 리턴하기 때문이다. 그래서 타입 추론 버그를
+  막는데 도움을 준다. 버그가 발생하는 예제는 다음과 같다.
+  ```scala
+  def countPositive(nums: List[Int]) =
+    nums.foldLeft(Right(0)) { (accumulator, num) =>
+      if(num > 0) {
+        accumulator.map(_ + 1)
+      } else {
+        Left("Negative. Stopping!")
+      }
+    }
+  // <console>:21: error: type mismatch;
+  //  found   : scala.util.Either[Nothing,Int]
+  //  required: scala.util.Right[Nothing,Int]
+  //              accumulator.map(_ + 1)
+  //                             ^
+  // <console>:23: error: type mismatch;
+  //  found   : scala.util.Left[String,Nothing]
+  //  required: scala.util.Right[Nothing,Int]
+  //              Left("Negative. Stopping!")
+  //                  ^
+  ```
