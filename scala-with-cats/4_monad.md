@@ -409,3 +409,62 @@ trait Monad[F[_]] {
     func(initial)
   ```
 - `map`과 `flatMap`이 같다.
+
+## Either
+
+- 다른 유용한 모나드를 살펴보자: Either는 스칼라 2.11 이전에 map이나 flatMap 메서드가 없어 모나드라고 생각하지
+  않았지만 스칼라 2.12 부터는 Right 편향된 모나드가 되었다.
+  
+### Left와 Right 편향
+
+- 스칼라 2.11 전에는 Either에 map과 flapMap 메서드가 없어 for 구문에서 쓰기 불편했다. 모든 생성 구문에 `.right`를
+  불러줘야 했다.
+  ``` scala
+val either1: Either[String, Int] = Right(10)
+val either2: Either[String, Int] = Right(32)
+
+for {
+  a <- either1.right
+  b <- either2.right
+} yield a + b
+// res0: scala.util.Either[String,Int] = Right(42)
+  ```
+- 스칼라 2.12에서는 다시 설계되었다. Either는 성공을 나타내는 Right를 결정할 수 있게 map과 flatMap을 지원한다. 그래서
+  for 구문을 더 편리하게 쓸 수 있다.
+  ``` scala
+for {
+  a <- either1
+  b <- either2
+} yield a + b
+// res1: scala.util.Either[String,Int] = Right(42)
+  ```
+- Cats에서 `cats.syntax.either`를 import 하면 모든 버전에서 Right 편향된 Either를 쓸 수 있다. 스칼라 2.12에서도 
+  문제 없이 쓸 수 있다.
+  ``` scala
+import cats.syntax.either._ // for map and flatMap
+
+for {
+  a <- either1
+  b <- either2
+} yield a + b
+  ```
+
+### 인스턴스 만들기
+
+- `cats.syntax.either`를 import 해서 Left와 Right 인스턴스를 `asLeft`, `asRight` 메서드로 직접 만들 수 있다.
+  ``` scala
+import cats.syntax.either._ // for asRight
+
+val a = 3.asRight[String]
+// a: Either[String,Int] = Right(3)
+
+val b = 4.asRight[String]
+// b: Either[String,Int] = Right(4)
+
+for {
+  x <- a
+  y <- b
+} yield x*x + y*y
+// res4: scala.util.Either[String,Int] = Right(25)
+```
+
